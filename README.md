@@ -1,183 +1,89 @@
-import streamlit as st
-import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
-import kagglehub
-import os
-from datetime import datetime
+📑 Documentación Técnica: Salud Mental en Estudiantes de Medicina
 
-# Configuración profesional de la página
-st.set_page_config(
-    page_title="Análisis COVID-19 Perú - Julio Molinares",
-    page_icon="📊",
-    layout="wide"
-)
+Estudiante: Julio Molinares
 
-# Configuración estética de Seaborn
-sns.set_theme(style="whitegrid", palette="viridis")
+Bootcamp: Talento Tech - Nivel Integrador
 
-# Función para la descarga y limpieza de datos
-@st.cache_data
-def load_data():
-    try:
-        # Descarga automática desde Kagglehub
-        path = kagglehub.dataset_download("martinclark/peru-covid19-august-2020")
-        
-        # Identificar el archivo CSV en el directorio descargado
-        files = os.listdir(path)
-        csv_file = [f for f in files if f.endswith('.csv')][0]
-        full_path = os.path.join(path, csv_file)
-        
-        df = pd.read_csv(full_path)
-        
-        # Pre-procesamiento de fechas si la columna existe
-        if 'FECHA_RESULTADO' in df.columns:
-            df['FECHA_RESULTADO'] = pd.to_datetime(df['FECHA_RESULTADO'], format='%Y%m%d', errors='coerce')
-        
-        return df
-    except Exception as e:
-        st.error(f"Error al cargar los datos desde Kaggle: {e}")
-        return pd.DataFrame()
+Dataset: Medical Student Mental Health (Kaggle)
 
-# --- GESTIÓN DE NAVEGACIÓN (Session State) ---
-if 'page' not in st.session_state:
-    st.session_state.page = 'landing'
+1. Modelo Entidad-Relación (MER)
 
-def set_page(page_name):
-    st.session_state.page = page_name
+Para este dataset, la normalización se enfoca en separar los datos demográficos de los resultados de salud mental y el contexto académico para asegurar la integridad de la información y evitar redundancias.
 
-# --- LANDING PAGE (Página de Inicio) ---
-if st.session_state.page == 'landing':
-    st.title("🛡️ Análisis Epidemiológico: Perú 2020")
-    st.subheader("Curso de Análisis de Datos - Nivel Integrador | Taleen Tech")
-    
-    col_text, col_img = st.columns([1, 1])
-    
-    with col_text:
-        st.markdown("""
-        ### Introducción al Dataset
-        Este conjunto de datos recopila información crítica sobre la propagación del COVID-19 en el territorio peruano. 
-        A través de este panel, exploraremos:
-        
-        * **Distribución Geográfica:** Identificación de las zonas de mayor incidencia.
-        * **Análisis Temporal:** Evolución de los contagios durante los meses críticos.
-        * **Métricas Demográficas:** Comprensión de los grupos más afectados.
-        
-        **Objetivo del Proyecto:** Aplicar técnicas de limpieza, manipulación y visualización de datos para generar insights de valor sobre la emergencia sanitaria.
-        """)
-        st.button("Ingresar al Panel de Trabajo 🚀", on_click=lambda: set_page('dashboard'), use_container_width=True)
-    
-    with col_img:
-        st.image("https://images.unsplash.com/photo-1584483766114-2cea6facdf57?auto=format&fit=crop&q=80&w=800", 
-                 caption="Respuesta sanitaria y análisis de datos en tiempo real")
+Estudiante: Entidad principal que almacena información básica del individuo (Edad, Género).
 
-    st.divider()
-    st.info("Proyecto Final realizado por: **Julio Molinares**")
+Contexto_Academico: Almacena el año de estudio y la percepción de presión académica.
 
-# --- DASHBOARD (Panel de Análisis) ---
-else:
-    # Barra lateral (Sidebar)
-    st.sidebar.image("https://images.unsplash.com/photo-1576086213369-97a306d36557?auto=format&fit=crop&q=80&w=200")
-    st.sidebar.title("Menú Principal")
-    if st.sidebar.button("🏠 Volver al Inicio"):
-        set_page('landing')
-    
-    st.sidebar.divider()
-    st.sidebar.markdown("### Desarrollado por:")
-    st.sidebar.write("Julio Molinares")
-    
-    # Carga de datos con indicador de progreso
-    with st.spinner("Conectando con Kaggle y procesando datos..."):
-        df = load_data()
+Evaluacion_Psicologica: Contiene los resultados de las escalas clínicas (PHQ-9 para depresión, GAD-7 para ansiedad) y métricas de hábitos (Calidad de Sueño).
 
-    if not df.empty:
-        st.title("📈 Panel de Trabajo: Análisis Integrador")
-        
-        # Organización por pestañas para mejor experiencia de usuario
-        tab_viz, tab_data, tab_docs = st.tabs(["📊 Visualizaciones", "🔍 Datos Crudos", "📖 Documentación"])
+2. Modelo Relacional
 
-        with tab_viz:
-            st.header("Exploración Estadística Visual")
-            
-            # Gráfico 1: Análisis Regional
-            st.subheader("1. Casos Positivos por Departamento")
-            col_plot1, col_help1 = st.columns([3, 1])
-            
-            with col_plot1:
-                if 'DEPARTAMENTO' in df.columns:
-                    fig, ax = plt.subplots(figsize=(10, 6))
-                    top_depts = df['DEPARTAMENTO'].value_counts().head(12)
-                    sns.barplot(x=top_depts.values, y=top_depts.index, ax=ax, palette="mako")
-                    ax.set_title("Top 12 Departamentos con Mayor Incidencia")
-                    st.pyplot(fig)
-                else:
-                    st.warning("No se encontró la columna 'DEPARTAMENTO'.")
-            
-            with col_help1:
-                with st.popover("💡 Ayuda: Análisis Regional"):
-                    st.markdown("""
-                    **¿Qué vemos aquí?**
-                    Este gráfico de barras muestra la frecuencia absoluta de casos positivos registrados por departamento. 
-                    Ayuda a identificar la descentralización de la pandemia hacia el interior del país.
-                    """)
+La estructura de tablas definida para la base de datos es la siguiente:
 
-            st.divider()
+Estudiantes (id_estudiante PK, edad, genero)
 
-            # Gráfico 2: Serie de Tiempo
-            st.subheader("2. Evolución Cronológica de Contagios")
-            col_plot2, col_help2 = st.columns([3, 1])
-            
-            with col_plot2:
-                if 'FECHA_RESULTADO' in df.columns:
-                    time_series = df.groupby('FECHA_RESULTADO').size().reset_index(name='CASOS')
-                    fig2, ax2 = plt.subplots(figsize=(10, 5))
-                    sns.lineplot(data=time_series, x='FECHA_RESULTADO', y='CASOS', ax=ax2, color='#e74c3c', linewidth=2)
-                    plt.xticks(rotation=45)
-                    ax2.set_title("Curva Epidemiológica (Marzo - Agosto 2020)")
-                    st.pyplot(fig2)
-                else:
-                    st.warning("No hay datos de fecha disponibles para el gráfico temporal.")
+Academico (id_academico PK, id_estudiante FK, año_estudio, presion_academica)
 
-            with col_help2:
-                with st.popover("💡 Ayuda: Tendencia"):
-                    st.markdown("""
-                    **¿Qué vemos aquí?**
-                    La línea de tiempo permite observar los picos máximos de contagio diario. Las fluctuaciones pueden 
-                    deberse a la capacidad de procesamiento de pruebas de cada laboratorio regional.
-                    """)
+Salud_Mental (id_salud PK, id_estudiante FK, score_depresion, score_ansiedad, calidad_sueño, nivel_estres)
 
-        with tab_data:
-            st.header("Inspección de Datos")
-            st.write("Vista previa de los primeros 50 registros:")
-            st.dataframe(df.head(50), use_container_width=True)
-            
-            st.markdown("### Estadísticas Descriptivas")
-            st.write(df.describe(include='all'))
+3. Scripts SQL (DDL)
 
-        with tab_docs:
-            st.header("Documentación del Proyecto")
-            st.markdown(f"""
-            ### Detalles de la Implementación
-            Este panel fue construido utilizando herramientas de código abierto líderes en la industria del análisis de datos.
-            
-            * **Fuente:** Dataset de Martin Clark hospedado en Kaggle.
-            * **Bibliotecas:**
-                * `Pandas`: Manipulación y limpieza de estructuras de datos.
-                * `Seaborn`: Visualización estadística de alta fidelidad.
-                * `Streamlit`: Despliegue de la interfaz de usuario.
-            
-            ### Indicadores Clave
-            El análisis se centra en la frecuencia de casos y la temporalidad, aplicando la siguiente lógica para la tasa de crecimiento:
-            
-            $$ \\text{{Crecimiento}} = \\frac{{\\text{{Casos actual}} - \\text{{Casos anterior}}}}{{\\text{{Casos anterior}}}} $$
-            
-            **Estudiante:** Julio Molinares  
-            **Programa:** Análisis de Datos - Nivel Integrador
-            """)
+Estos scripts definen la estructura de la base de datos en SQLite. Se han incluido restricciones de llaves foráneas para mantener la integridad referencial.
 
-    else:
-        st.error("Error crítico: No se ha podido establecer la conexión con el dataset.")
+-- Tabla de Estudiantes
+CREATE TABLE IF NOT EXISTS Estudiantes (
+    id_estudiante INTEGER PRIMARY KEY AUTOINCREMENT,
+    genero TEXT NOT NULL,
+    edad INTEGER CHECK(edad > 0)
+);
 
-# Pie de página constante
-st.markdown("---")
-st.caption("© 2024 Proyecto Integrador Taleen Tech | Desarrollado por Julio Molinares")
+-- Tabla de Contexto Académico
+CREATE TABLE IF NOT EXISTS Academico (
+    id_academico INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_estudiante INTEGER,
+    año_estudio TEXT,
+    presion_academica INTEGER,
+    FOREIGN KEY (id_estudiante) REFERENCES Estudiantes(id_estudiante)
+);
+
+-- Tabla de Salud Mental y Evaluación
+CREATE TABLE IF NOT EXISTS Salud_Mental (
+    id_salud INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_estudiante INTEGER,
+    score_depresion INTEGER, -- Escala PHQ-9
+    score_ansiedad INTEGER,   -- Escala GAD-7
+    calidad_sueño INTEGER,
+    nivel_estres INTEGER,
+    FOREIGN KEY (id_estudiante) REFERENCES Estudiantes(id_estudiante)
+);
+
+
+4. Consultas Analíticas (DML)
+
+A continuación, se presentan las consultas SQL diseñadas para extraer los KPIs (Indicadores Clave de Desempeño) que se mostrarán en el dashboard:
+
+Promedio de Ansiedad (GAD-7) por Género:
+
+SELECT e.genero, AVG(s.score_ansiedad) as Promedio_Ansiedad
+FROM Estudiantes e
+JOIN Salud_Mental s ON e.id_estudiante = s.id_estudiante
+GROUP BY e.genero;
+
+
+Relación entre Calidad de Sueño y Niveles de Estrés:
+
+SELECT calidad_sueño, AVG(nivel_estres) as Promedio_Estres
+FROM Salud_Mental
+GROUP BY calidad_sueño
+ORDER BY calidad_sueño DESC;
+
+
+Distribución de Depresión por Año de Estudio:
+
+SELECT a.año_estudio, AVG(s.score_depresion) as Promedio_Depresion
+FROM Academico a
+JOIN Salud_Mental s ON a.id_estudiante = s.id_estudiante
+GROUP BY a.año_estudio;
+
+
+Este diseño de base de datos y lógica de consultas garantiza un análisis robusto y escalable para el entorno de Talento Tech.
