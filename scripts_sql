@@ -1,0 +1,81 @@
+1. Lenguaje de Definición de Datos (DDL)
+
+Estos comandos crean la estructura de tablas, definen los tipos de datos y establecen las relaciones de integridad referencial (Llaves Primarias y Foráneas).
+
+-- Habilitar el soporte de llaves foráneas (específico para SQLite)
+PRAGMA foreign_keys = ON;
+
+-- 1. Crear tabla de Estudiantes (Dimension)
+CREATE TABLE IF NOT EXISTS Estudiantes (
+    id_estudiante INTEGER PRIMARY KEY AUTOINCREMENT,
+    genero VARCHAR(50) NOT NULL,
+    edad INTEGER NOT NULL CHECK (edad > 0)
+);
+
+-- 2. Crear tabla Académico (Dimensión/Contexto)
+CREATE TABLE IF NOT EXISTS Academico (
+    id_academico INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_estudiante INTEGER NOT NULL,
+    año_estudio VARCHAR(50),
+    presion_academica INTEGER CHECK (presion_academica BETWEEN 1 AND 5),
+    FOREIGN KEY (id_estudiante) REFERENCES Estudiantes(id_estudiante) ON DELETE CASCADE
+);
+
+-- 3. Crear tabla de Salud Mental (Hechos/Evaluación)
+CREATE TABLE IF NOT EXISTS Salud_Mental (
+    id_salud INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_estudiante INTEGER NOT NULL,
+    score_depresion INTEGER, -- Escala PHQ-9
+    score_ansiedad INTEGER,   -- Escala GAD-7
+    calidad_sueño INTEGER CHECK (calidad_sueño BETWEEN 1 AND 10),
+    nivel_estres INTEGER CHECK (nivel_estres BETWEEN 1 AND 10),
+    FOREIGN KEY (id_estudiante) REFERENCES Estudiantes(id_estudiante) ON DELETE CASCADE
+);
+
+
+2. Lenguaje de Manipulación de Datos (DML) - Consultas
+
+Estas consultas permiten extraer los indicadores clave (KPIs) utilizados en el Dashboard de Streamlit.
+
+A. Análisis de Ansiedad por Género
+
+Esta consulta utiliza un JOIN para relacionar los datos demográficos con los resultados clínicos.
+
+SELECT 
+    E.genero, 
+    ROUND(AVG(S.score_ansiedad), 2) AS promedio_ansiedad,
+    COUNT(E.id_estudiante) AS total_estudiantes
+FROM Estudiantes E
+JOIN Salud_Mental S ON E.id_estudiante = S.id_estudiante
+GROUP BY E.genero
+ORDER BY promedio_ansiedad DESC;
+
+
+B. Relación entre Calidad de Sueño y Estrés
+
+Análisis de agrupación para identificar patrones de comportamiento.
+
+SELECT 
+    calidad_sueño, 
+    ROUND(AVG(nivel_estres), 2) AS promedio_estres
+FROM Salud_Mental
+GROUP BY calidad_sueño
+ORDER BY calidad_sueño ASC;
+
+
+C. Nivel de Depresión por Año Académico
+
+Consulta multitable para evaluar el impacto del progreso en la carrera sobre la salud mental.
+
+SELECT 
+    A.año_estudio, 
+    ROUND(AVG(S.score_depresion), 2) AS promedio_depresion
+FROM Academico A
+JOIN Salud_Mental S ON A.id_estudiante = S.id_estudiante
+GROUP BY A.año_estudio
+ORDER BY promedio_depresion DESC;
+
+
+Nota: Estos scripts están optimizados para SQLite, que es el motor utilizado en la aplicación interactiva, pero son compatibles con la mayoría de gestores SQL estándar (PostgreSQL, MySQL, SQL Server).
+
+Realizado por: Julio Molinares
